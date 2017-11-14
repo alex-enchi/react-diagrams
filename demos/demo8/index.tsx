@@ -6,7 +6,10 @@ import {
 	DefaultNodeModel,
 	LinkModel,
 	DefaultPortModel,
-	DiagramWidget
+	DiagramWidget,
+	DefaultNodeInstanceFactory,
+	DefaultPortInstanceFactory,
+	LinkInstanceFactory
 } from "../../src/main";
 import * as React from "react";
 
@@ -17,14 +20,30 @@ class NodeDelayedPosition extends React.Component<any, any> {
 	constructor(props) {
 		super(props);
 		this.updatePosition = this.updatePosition.bind(this);
+		this.updatePositionViaSerialize = this.updatePositionViaSerialize.bind(this);
 	}
 
 	updatePosition() {
-		const {model} = this.props;
+		const {engine} = this.props;
+		let model = engine.getDiagramModel();
 		const nodes = model.getNodes();
 		let node = nodes[Object.keys(nodes)[0]];
 		node.x += 30;
 		node.y += 30;
+		this.forceUpdate();
+	}
+
+	updatePositionViaSerialize() {
+		let {engine} = this.props;
+		let model = engine.getDiagramModel();
+		let str = JSON.stringify(model.serializeDiagram());
+		let model2 = new DiagramModel();
+		let obj = JSON.parse(str);
+		let node = obj.nodes[0];
+		node.x += 30;
+		node.y += 30;
+		model2.deSerializeDiagram(obj, engine);
+		engine.setDiagramModel(model2);
 		this.forceUpdate();
 	}
 
@@ -34,6 +53,7 @@ class NodeDelayedPosition extends React.Component<any, any> {
 			<div>
 				<DiagramWidget diagramEngine={engine}/>
 				<button onClick={this.updatePosition}>Update position</button>
+				<button onClick={this.updatePositionViaSerialize}>Update position via serialize</button>
 			</div>
 		);
 	}
@@ -73,6 +93,11 @@ export default () => {
 
 	//5) load model into engine
 	engine.setDiagramModel(model);
+
+	//we need this to help the system know what models to create form the JSON
+	engine.registerInstanceFactory(new DefaultNodeInstanceFactory());
+	engine.registerInstanceFactory(new DefaultPortInstanceFactory());
+	engine.registerInstanceFactory(new LinkInstanceFactory());
 
 	//6) render the diagram!
 	return <NodeDelayedPosition engine={engine} model={model}/>;
